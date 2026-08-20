@@ -1,0 +1,12 @@
+{
+  "name": "bc-clubcardsbot",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Deck builder and autoplay bot for the Bondage Club Club Cards minigame",
+  "scripts": {
+    "bundle": "node tools/bundle.js",
+    "planner": "node tools/build-planner.js",
+    "deck": "node tools/build-deck.js",
+    "archetypes": "node tools/build-deck.js --all"
+  }
+}

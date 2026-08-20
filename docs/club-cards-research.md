@@ -2,13 +2,11 @@
 
 Research notes backing `src/bc-clubcards-bot.user.js`.
 
-**Sources.** Rules/flavour come from the developer's own announcement posts (ben987 / Bondage
-Projects). The API details come from **`bc-stubs` v131.0.0** on npm — the TypeScript
-declarations the BC developers publish for mod authors. They are generated from the game's
-JSDoc, so function names, signatures and field names are authoritative for R131.
-`gitgud.io` and the game hosts were unreachable from the machine these notes were written on,
-so `ClubCard.js` bodies (and the `ClubCardList` card data) were **not** read directly —
-anything marked *(unverified)* below is inference and should be confirmed in a live client.
+**Sources.** Everything below is read from the game's own source: `ClubCard.js`,
+`ClubCardBuilder.js`, `GameClubCard.js`, `ClubCardLounge.js` and `Text_ClubCard.csv` (R131),
+cross-checked against the `bc-stubs` v131 type declarations. The card data in
+`data/cards.json` was extracted by evaluating `ClubCard.js` and joining the caption file —
+301 cards, verified card-for-card against the live `ClubCardList`.
 
 ---
 
@@ -32,18 +30,33 @@ two members take player slots, everyone else can spectate.
 
 ## 2. Rules
 
-Confirmed by the dev posts:
+- Deck = **30 to 40 cards, all unique** (`ClubCardBuilderMinDeckSize` / `MaxDeckSize`). Ten
+  deck slots per account. The dev posts say 40; 30 is the real floor.
+- **First to 100 fame wins** — `ClubCardFameGoal = 100`, not configurable in R131.
+- The player going first draws **5** cards, the second **6**. Both also start with a free
+  **Tips** card in hand (`ClubCardLoadDeckNumber`).
+- Club tiers, straight from `Text_ClubCard.csv` and the tables:
 
-- Deck = **40 cards, all unique** (no duplicates).
-- Both players start with **$10, 0 fame, and the Apartment** (smallest building = level 1).
-- The player going first draws **5** cards; the second player draws **6** to compensate.
-- Fame goal `X` is configurable (`ClubCardFameGoal`); first to reach it wins.
-- Members occupy board slots; **building level caps the member count**.
-- Some cards resolve once and are discarded; others stay on the board, and timed **event**
-  cards last a number of turns (`Time`, extended by `ExtraTime`).
-- Not all cards are unlocked at the start — you win them by beating specific opponents
-  (Amanda, Sarah, Sophie, the Maid Quarters maid, the Shibari teacher, …). See
-  `ClubCardGetReward()` and `ClubCard.Reward` / `RewardMemberNumber`.
+  | Tier | Building | Cost | Member slots | Liability slots |
+  | --- | --- | --- | --- | --- |
+  | 1 | Apartment | free | 5 | 1 |
+  | 2 | Cottage | 10 | 7 | 2 |
+  | 3 | House | 20 | 13 | 3 |
+  | 4 | Mansion | 30 | 20 | 5 |
+  | 5 | Manor | 40 | 40 | 8 |
+
+  `ClubCardLevelLimit = [0,5,7,13,20,40]`, `ClubCardLevelCost = [0,0,10,20,30,40]`,
+  `ClubCardLiabilityLimit = [0,1,2,3,5,8]` — all indexed by tier, so index 0 is unused.
+  Quality Maid cuts the upgrade cost by 10 each; Inspector raises it by 10.
+- **Ending a turn with negative money cancels that turn's fame gain.** `ClubCardEndTurn`
+  restores `Fame` to its value at the start of the turn if `Money < 0`. This is the single
+  most important rule for a bot: over-committing on upkeep does not just slow you down, it
+  erases the turn.
+- Events without the `TimedEvent` or `ContinuousEvent` group are discarded at the end of the
+  turn they were played.
+- Not all cards are unlocked at the start — you win them by beating specific opponents. See
+  `ClubCardGetReward()` and `ClubCard.Reward` / `RewardMemberNumber`; 23 of the 301 cards are
+  reward cards.
 
 Structural facts from the code:
 
@@ -51,17 +64,16 @@ Structural facts from the code:
   `PlayCard`, `DrawAndEndTurn`, `Bankrupt`, `UpgradeLevel`, `EndTurn`.
   That enum *is* the bot's action space.
 - Cards playable per turn: `ClubCardTurnPlayableCardCount(player)` (base + `ExtraPlay`).
-- Level-up cost: `ClubCardCalculateLevelCost(player)`; static tables are
-  `ClubCardLevelCost[]`, `ClubCardLevelLimit[]` (member cap per level) and
-  `ClubCardLiabilityLimit[]`.
+- Level-up cost: `ClubCardCalculateLevelCost(player)`, and `Homeroom` blocks upgrades for
+  both players while it is out.
 - **Liability** cards are played onto the *opponent's* side — `ClubCardIsLiability(card)` and
   `ClubCardFindTarget(card)`.
 - **Bankruptcy**: `ClubCardBankrupt()` — "she restarts her club from scratch, draws 5 new
   cards and ends her turn". A legal escape from a board you can no longer pay for.
 - Stealing money/fame between players: `ClubCardPlayerSteal(player, money, fame, isStickyFingers)`.
 - A card's effect can be capped by its tier: `ClubCardGetMaxEffectFromCard(card, fame)`.
-- "Tier 1" is defined in code as **no `RequiredLevel`, or `RequiredLevel <= 1`**
-  (see the `ClubCardRandomCardName` doc comment).
+- "Tier 1" is defined in code as **no `RequiredLevel`, or `RequiredLevel <= 1`**.
+- Card counts by tier across the 301 cards: 113 / 61 / 61 / 44 / 22. 209 members, 92 events.
 - Cards can be **negated** (`Negated`, `Negating`, `ClubCardCancelNegation`).
 - Several cards have bespoke handlers: Alvin (`ClubCardAlvinCondition`), Tifa
   (`ClubCardTifaSelection`), Clare (`ClubCardClareSelection`), plus a "Streets" zone
@@ -155,8 +167,19 @@ interface GameClubCardParameters {
 }
 ```
 
-`ServerAccountUpdate` whitelists `Game.ClubCard`, so writing the object and queueing a
-`Game` update persists a deck. The builder also exposes `ClubCardBuilderSaveChanges()`,
+**A deck is stored as a string of characters whose code points are the card IDs** — see
+`ClubCardBuilderSaveChanges`:
+
+```js
+for (let C of ClubCardBuilderDeckCurrent) Deck = Deck + String.fromCharCode(C);
+```
+
+and it is read back with `charCodeAt(i)`. So `deck.length` *is* the card count, which is
+what the 30-40 validity check measures. `Player.Game.ClubCard.Reward` uses the same
+encoding: a card is unlocked when `Reward.indexOf(String.fromCharCode(card.ID)) >= 0`.
+Card IDs run 1000-31046, all outside the UTF-16 surrogate range, so the round trip is safe.
+
+`ServerAccountUpdate.QueueData({ Game: Player.Game }, true)` persists it. The builder also exposes `ClubCardBuilderSaveChanges()`,
 `ClubCardBuilderLoadDeck(n)`, `ClubCardBuilderMinDeckSize` / `MaxDeckSize`,
 `ClubCardBuilderList` (the legal card pool for this account) and
 `ClubCardBuilderDefaultDecksList` — the precons `Default`, `Princess Treatment`,
@@ -191,39 +214,72 @@ Zones travel as bundled strings: `GameClubCardDoBundle`, `GameClubCardBoardDoBun
 `GameClubCardHandDoBundle` and the matching `…UndoBundle`. Outbound sync is
 `GameClubCardSyncOnlineData(Progress?, LocalPlayerOnly?)`; inbound is `GameClubCardProcess`.
 
-**Consequence for a bot:** the whole game state lives client-side and is trusted between the
-two clients. A bot does not need to fake packets — it drives the normal local functions and
-lets the game sync as usual.
+**Sync happens in exactly four places** — `ClubCardUpgradeLevel`, `ClubCardLoadDeckNumber`
+(local player only), `ClubCardEndTurn` and `ClubCardEndGameSyncAndMessage`. Playing a card
+mid-turn is *not* synced: the opponent sees your board when your turn ends. A bot must
+therefore not add sync calls of its own — doing so would show the opponent information the
+vanilla client would not.
 
-## 7. Entry points a bot uses
+The whole game state lives client-side and is trusted between the two clients, so a bot never
+needs to forge packets — it drives the normal local functions and lets the game sync as usual.
+
+## 7. Driving the game
+
+Every turn ends in one of five actions, and all of them go through `ClubCardStartTurn`:
+
+```js
+ClubCardStartTurn(ClubCardStartTurnType.PLAYCARD)      // plays ClubCardFocus
+ClubCardStartTurn(ClubCardStartTurnType.DRAWENDTURN)   // draws if no card was played, ends turn
+ClubCardStartTurn(ClubCardStartTurnType.UPGRADELEVEL)
+ClubCardStartTurn(ClubCardStartTurnType.BANKRUPT)      // fresh club, redraw 5, end turn
+ClubCardStartTurn(ClubCardStartTurnType.ENDTURN)       // no-op branch
+```
+
+`ClubCardClickPlayCard(false)` is just `ClubCardStartTurn(PLAYCARD)`, so setting
+`ClubCardFocus` and calling that is precisely the mouse path.
+
+Targeting: if a card has a `Prerequisite`, `ClubCardPlayCard` parks it in `ClubCardPending`
+and returns without spending the action. Pick a target where
+`ClubCardCanSelectCard(me, card)` is true, then call `ClubCardSelectCard(target)` — that sets
+`ClubCardSelection` and re-enters `ClubCardPlayCard`. Prerequisite kinds: `SelectOwnMember`,
+`SelectOpponentMember`, `SelectAnyMember`, `SelectAnyEvent`, `SelectCardInHand`,
+`SelectATier` (opens the `TIERSELECTION` popup), `SearchACard` (opens the `SEARCH` popup).
+
+Popups (`ClubCardPopup.Mode`): `DECK` (pick a deck slot at game start via
+`ClubCardLoadDeckNumber(n)`), `TEXT`, `YESNO`, `SEARCH`, `TIERSELECTION`, `DISCARDPILE`,
+`INFO`.
 
 | Need | Call |
 | --- | --- |
-| Am I in a game / is it online | `ClubCardIsPlaying()`, `ClubCardIsOnline()` |
+| Am I in a game / online | `ClubCardIsPlaying()`, `ClubCardIsOnline()` |
 | My seat | `ClubCardPlayer[ClubCardGetPlayerIndex()]` |
 | Whose turn | `ClubCardPlayer[ClubCardTurnIndex]` |
-| Legality | `ClubCardCanPlayCard(me, card)`, `ClubCardCanPlayEffectsLimitation`, `card.CanPlay` |
-| Play | `ClubCardPlayCard(me, card, triggerOnPlay)` |
-| Targeting prompt | `ClubCardCanSelectCard`, `ClubCardCardsSelectConditions(card, me, AICard)`, `ClubCardSelectCard(card)` |
-| Activated ability | `ClubCardCanActiveEffect(me, card)`, `ClubCardActiveEffect(me, card)` |
-| Level up | `ClubCardCalculateLevelCost(me)`, `ClubCardUpgradeLevel(me)` |
-| End turn | `ClubCardEndTurn(draw)` |
-| Give up | `ClubCardConcede()`, `ClubCardBankrupt()` |
-| Push state online | `GameClubCardSyncOnlineData("Action")` |
-| Built-in AI policy | `ClubCardAIPlay()` / `ClubCardAIStart()` |
+| Legality | `ClubCardCanPlayCard(me, card)` — needs `card.Location === "PlayerHand"` |
+| Plays remaining | `ClubCardTurnPlayableCardCount(me) - ClubCardTurnCardPlayed` |
+| Activated ability | `ClubCardCanActiveEffect(me, card)`, `ClubCardActiveEffect(me, card)` — **costs an action** |
+| Give up | `ClubCardConcede()` |
 
-`ClubCardAIPlay()` is the game's own opponent policy. It is the cheapest possible "bot", but
-it is written for a seat whose `Control === "AI"`; using it for a `"Player"`/`"Online"` seat
-is *(unverified)* and may skip the online sync. The script below implements its own policy
-and syncs explicitly.
+`ClubCardAIPlay()` is the game's own opponent policy: 50/50 upgrade if affordable, otherwise
+play a **random** legal card, otherwise consider bankruptcy, otherwise draw and pass. It bails
+out immediately unless `Control === "AI"`, so it cannot drive a human seat — and beating it is
+a low bar.
 
-## 8. Open questions to confirm in a live client
+## 8. Modelling notes
 
-1. Numeric values of `ClubCardLevelCost`, `ClubCardLevelLimit`, `ClubCardLiabilityLimit`.
-2. Whether `ClubCardPlayCard` already syncs online, or whether `GameClubCardSyncOnlineData`
-   must be called after each action.
-3. The exact prerequisite/targeting flow (`ClubCardPending` → popup → `ClubCardSelectCard`).
-4. The shape of `Player.Game.ClubCard.Reward` (unlocked-card encoding).
-5. Whether `ClubCardBuilderList` is populated before the builder screen has been opened once.
+`data/cards.json` carries each card's static `FamePerTurn` / `MoneyPerTurn`, but most of a
+card's power sits in its rules text and hooks, which the static fields do not express. The
+deck engine parses the text for per-turn clauses (`+2 Fame/turn per Patient ally (max +8)`),
+conditional clauses (`if there's a Dominant ally`), one-shot entry effects, draws and extra
+actions, then values them against the composition of the deck being built.
 
-`BCC.probe()` in the userscript dumps all five.
+Known limits of that model, all of which under- or over-rate specific cards:
+
+- Drawback text is not parsed. `Encased` ("You Play A Non-Latex Non-Dominant Member: Leaves")
+  scores on its raw 2/6 statline as if the drawback did not exist.
+- Effects with no digits ("+Fame/turn equal to club tier") are scored at a flat tier 3.
+- Conditional one-shots are discounted by a flat half rather than by real probability.
+- Cards whose value is entirely in a hook the text does not quantify are scored near zero.
+
+The archetype search is honest about the result: with the full card pool unlocked, a generic
+"best cards" deck currently out-scores every tribal build, because tribal payoffs are capped
+while generic statlines are not. `node tools/build-deck.js --all` prints the comparison.
