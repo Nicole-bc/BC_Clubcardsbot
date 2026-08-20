@@ -30,7 +30,7 @@ const owned = ownedArg === "all"
 	? new Set(cards.filter((c) => c.Reward).map((c) => c.ID))
 	: new Set(String(ownedArg).split(",").filter(Boolean).map(Number));
 const pool = cards.filter((c) => !c.Reward || owned.has(c.ID));
-const size = Number(arg("size", 40));
+const size = Number(arg("size", engine.DEFAULT_DECK));
 const brief = arg("brief", "Build the strongest general-purpose deck.");
 
 // The engine's own read, handed over as a starting point rather than an answer.
@@ -66,7 +66,19 @@ These rules are read from the game's source, not from memory:
   cancelled entirely. Upkeep-heavy boards do not merely slow you down, they erase turns.
 - Liability cards are played into the OPPONENT's club, taking their slots.
 - Events without the TimedEvent or ContinuousEvent group are discarded at end of turn.
-- The 'streets' is the discard pile; some cards care about it.`;
+- The 'streets' is the discard pile; some cards care about it.
+
+Tempo decides games. Real games finish in 15-17 turns and rarely reach 20, so 100 fame in
+about 16 turns means averaging better than 6 fame per turn. A card only pays out for the turns
+left after you can afford to play it: climbing to tier 5 costs 100 money in total, so tier 5
+cards land around turn 12 and earn for roughly three turns, while a tier 1 card earns for
+fourteen. Expensive cards must therefore be dramatically better, not slightly better, and a
+deck that only comes together at tier 4 has already lost to a deck that curved out at tier 2.
+
+Deck size is a real decision, not a formality. You draw one card per turn and no card appears
+twice, so a 30-card deck reaches any particular card about a third sooner than a 40-card one.
+Most competitive players run 30. Build at 30 unless the deck genuinely needs the extra breadth,
+and if a win condition depends on specific cards, run the minimum so you find them in time.`;
 
 const SYSTEM = `You are an expert constructed-format deckbuilder. You are given every card in the
 game with its printed statline and full rules text.
@@ -121,7 +133,9 @@ const schema = {
 
 Brief: ${brief}
 
-Deck size: exactly ${size} cards, all unique.
+Deck size: exactly ${size} cards, all unique.${size > engine.MIN_DECK ? `
+(Note: ${size} was requested explicitly. ${engine.MIN_DECK} would be more consistent — say so in the
+strategy if you think the extra ${size - engine.MIN_DECK} cards are hurting this deck.)` : ""}
 
 For reference, the heuristic engine's own build (archetype "${engineDeck.archetype || "goodstuff"}",
 total score ${engineDeck.score.toFixed(0)}) is: ${engineDeck.ids.join(", ")}

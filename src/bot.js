@@ -13,7 +13,7 @@
 		allowOnline: false,
 		autoplay: false,
 		deckSlot: 0,
-		deckSize: 40,
+		deckSize: 30,   // consistency beats breadth at one draw per turn
 		archetype: null,
 		autoPickDeck: true,       // answer the deck-selection popup at game start
 		tickMs: 700,

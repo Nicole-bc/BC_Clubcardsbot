@@ -264,7 +264,34 @@ play a **random** legal card, otherwise consider bankruptcy, otherwise draw and 
 out immediately unless `Control === "AI"`, so it cannot drive a human seat — and beating it is
 a low bar.
 
-## 8. Modelling notes
+## 8. Tempo — how the game is actually played
+
+The rules above come from the source. This section comes from play experience, and it changes
+the valuation more than any single rule does:
+
+- **Games run 15-17 turns and rarely reach 20.** Players push for a fast, aggressive win.
+- 100 fame in ~16 turns means a deck must average better than **6.25 fame per turn**.
+- **Most players run 30 cards, not 40.** You draw one card per turn and the format is
+  singleton, so a 30-card deck reaches any particular card about a third sooner. When a deck
+  depends on specific win-condition cards, the minimum size is the correct size.
+- **A card only earns for the turns left after you can afford it.** Climbing to tier 5 costs
+  100 money in total, so tier 5 cards land around turn 12 and pay out for about four turns,
+  while a tier 1 card pays out for fifteen:
+
+  | Tier | Comes online | Turns of payout |
+  | --- | --- | --- |
+  | 1 | turn 1 | 15 |
+  | 2 | turn 3 | 13 |
+  | 3 | turn 6 | 10 |
+  | 4 | turn 9 | 7 |
+  | 5 | turn 12 | 4 |
+
+  The engine uses exactly this table (`TIER_ONLINE`, `tierLifetime`). An expensive card has to
+  be dramatically better than a cheap one, not slightly better, and a deck that only comes
+  together at tier 4 has already lost to one that curved out at tier 2. The default curve
+  (`CURVE`) is weighted low to match: 14/10/8/5/3, normalised to the deck size.
+
+## 9. Modelling notes
 
 `data/cards.json` carries each card's static `FamePerTurn` / `MoneyPerTurn`, but most of a
 card's power sits in its rules text and hooks, which the static fields do not express. The

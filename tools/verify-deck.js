@@ -26,7 +26,9 @@ for (let i = 0; i < 200; i++) {
 	}
 }
 
-const deck = engine.buildDeck({ pool: cards.filter((c) => !c.Reward), size: 40, getText: (c) => c.Text || "" });
+// Deliberately builds at the 40-card ceiling: if the encoding survives the widest
+// legal deck it survives every smaller one.
+const deck = engine.buildDeck({ pool: cards.filter((c) => !c.Reward), size: engine.MAX_DECK, getText: (c) => c.Text || "" });
 const encoded = engine.encodeDeck(deck.ids);
 const checks = [];
 const check = (name, ok, detail) => checks.push({ check: name, ok, detail });

@@ -81,7 +81,7 @@ every archetype the deck builder itself recognises, refines each one three times
 the highest total. Fame is weighted as the win condition; money at roughly 0.4 of a fame
 point, since it only buys tiers and covers upkeep.
 
-`docs/club-cards-research.md` §8 lists where the model is known to be wrong.
+`docs/club-cards-research.md` §8 covers tempo, §9 lists where the model is known to be wrong.
 
 ## Asking Claude instead
 

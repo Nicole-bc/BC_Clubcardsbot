@@ -132,7 +132,7 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
     <label for="arch">Archetype</label>
     <select id="arch"></select>
     <label for="size">Cards</label>
-    <input type="number" id="size" min="30" max="40" value="40">
+    <input type="number" id="size" min="30" max="40" value="30">
     <button class="btn" id="build">Build deck</button>
     <button class="btn ghost" id="clear">Clear</button>
     <label for="import">Load</label>
@@ -160,7 +160,7 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
 
   <aside class="deck">
     <h2>Your club</h2>
-    <div class="meter"><b id="deckN">0</b><span class="of">of 30–40 cards</span></div>
+    <div class="meter"><b id="deckN">0</b><span class="of">of 30–40 — smaller draws its combos sooner</span></div>
     <div class="bar"><i id="deckBar" style="width:0%"></i></div>
     <p class="legal" id="legal">Empty deck.</p>
 
@@ -380,7 +380,7 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
   $("clear").addEventListener("click", () => { deck.clear(); render(); });
   $("build").addEventListener("click", () => {
     const built = E.buildDeck({
-      pool: CARDS, size: Math.max(30, Math.min(40, Number($("size").value)||40)),
+      pool: CARDS, size: Math.max(30, Math.min(40, Number($("size").value)||30)),
       getText: text, archetype: $("arch").value || null,
     });
     if (!built) return;

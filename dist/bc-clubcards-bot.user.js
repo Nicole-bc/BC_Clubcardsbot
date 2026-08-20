@@ -36,6 +36,19 @@
 	const LIABILITY_LIMIT = [0, 1, 2, 3, 5, 8];
 	const MIN_DECK = 30;
 	const MAX_DECK = 40;
+	// You draw one card per turn and the format is singleton, so a 30-card deck reaches any
+	// given combo piece about a third sooner than a 40. Consistency beats the extra breadth,
+	// which is why 30 is both the default here and what most players run.
+	const DEFAULT_DECK = MIN_DECK;
+
+	// Games are decided fast — 15 to 17 turns, rarely past 20 — so 100 fame across ~16 turns
+	// means a deck has to average better than 6 fame a turn.
+	const GAME_LENGTH = 16;
+	// The turn a tier realistically comes online, given you must bank 10/20/30/40 to climb.
+	// This is what makes high tiers expensive: a tier 5 card lands around turn 12 and pays
+	// out for three turns, while a tier 1 card pays out for fourteen.
+	const TIER_ONLINE = [0, 1, 3, 6, 9, 12];
+	const tierLifetime = (tier) => Math.max(1, GAME_LENGTH - TIER_ONLINE[Math.min(5, tier)]);
 	const DECK_SLOTS = 10;
 
 	/** The deck builder's own tag filters, so archetypes match what the game shows. */
@@ -74,13 +87,12 @@
 	};
 
 	const DEFAULTS = {
-		horizon: 6,        // turns a card is expected to stay on board
-		board: 7,          // typical member count once the club is going
+		board: 6,          // typical member count once the club is going
 		famePoint: 1.0,    // fame is the win condition
 		moneyPoint: 0.42,  // money only buys tiers and pays upkeep
 		drawValue: 2.5,
 		actionValue: 8.0,
-		tierPenalty: 1.5,
+		tierPenalty: 0.5,  // small: the lifetime model already prices tiers
 		liabilityValue: 4.0,
 		prereqPenalty: 1.5,
 	};
@@ -200,7 +212,8 @@
 		}
 
 		const shots = parseOneShots(text);
-		const lifetime = card.Type === "Event" ? Math.min(o.horizon, Number(card.Time || 1)) : o.horizon;
+		const life = tierLifetime(tierOf(card));
+		const lifetime = card.Type === "Event" ? Math.min(life, Number(card.Time || 1)) : life;
 
 		// A bonus gated on a condition only pays when the condition holds.
 		const gate = shots.conditional ? 0.5 : 1;
@@ -227,7 +240,10 @@
 
 	// ---- deck construction --------------------------------------------------
 
-	const CURVE = { 1: 12, 2: 8, 3: 8, 4: 6, 5: 6 };  // 40 cards across the tiers
+	// Weighted low because the game ends before a top-heavy deck deploys. Normalised to the
+	// requested deck size rather than assumed to total 40.
+	const CURVE = { 1: 14, 2: 10, 3: 8, 4: 5, 5: 3 };
+	const CURVE_TOTAL = Object.values(CURVE).reduce((a, b) => a + b, 0);
 
 	function buildFor(archetype, pool, size, getText, opts) {
 		const family = archetype ? pool.filter(GROUP_FILTERS[archetype]) : [];
@@ -250,7 +266,7 @@
 			}
 			for (const tierKey of Object.keys(CURVE)) {
 				const tier = Number(tierKey);
-				let quota = Math.round(CURVE[tier] * (size / MAX_DECK));
+				let quota = Math.round((CURVE[tier] / CURVE_TOTAL) * size);
 				for (const e of scored) {
 					if (quota <= 0 || picked.size >= size) break;
 					if (e.tier !== tier || picked.has(e.card.ID)) continue;
@@ -283,7 +299,7 @@
 	 */
 	function buildDeck(args) {
 		const pool = (args.pool || []).filter((c) => c && typeof c.ID === "number");
-		const size = Math.min(MAX_DECK, Math.max(MIN_DECK, args.size || MAX_DECK));
+		const size = Math.min(MAX_DECK, Math.max(MIN_DECK, args.size || DEFAULT_DECK));
 		if (pool.length < size) return null;
 		const names = args.archetype ? [args.archetype] : [null].concat(Object.keys(GROUP_FILTERS));
 		let best = null;
@@ -307,8 +323,8 @@
 
 	return {
 		FAME_GOAL, LEVEL_LIMIT, LEVEL_COST, LIABILITY_LIMIT,
-		MIN_DECK, MAX_DECK, DECK_SLOTS, GROUP_FILTERS, DEFAULTS, CURVE,
-		tierOf, hasAny, parseClauses, parseOneShots, deckContext, valueCard,
+		MIN_DECK, MAX_DECK, DEFAULT_DECK, DECK_SLOTS, GROUP_FILTERS, DEFAULTS, CURVE,
+		GAME_LENGTH, TIER_ONLINE, tierLifetime, tierOf, hasAny, parseClauses, parseOneShots, deckContext, valueCard,
 		buildDeck, encodeDeck, decodeDeck,
 	};
 });
@@ -328,7 +344,7 @@
 		allowOnline: false,
 		autoplay: false,
 		deckSlot: 0,
-		deckSize: 40,
+		deckSize: 30,   // consistency beats breadth at one draw per turn
 		archetype: null,
 		autoPickDeck: true,       // answer the deck-selection popup at game start
 		tickMs: 700,

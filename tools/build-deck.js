@@ -2,9 +2,9 @@
 /**
  * Offline deck builder. Runs the same engine the bot uses in-game, over data/cards.json.
  *
- *   node tools/build-deck.js                     best archetype, 40 cards
+ *   node tools/build-deck.js                     best archetype, 30 cards
  *   node tools/build-deck.js --archetype Maid    force an archetype
- *   node tools/build-deck.js --size 30           smaller deck
+ *   node tools/build-deck.js --size 40           wider deck, less consistent
  *   node tools/build-deck.js --owned 1234,5678   also allow these reward card IDs
  *   node tools/build-deck.js --all               score every archetype
  */
@@ -21,7 +21,7 @@ const flag = (name) => argv.includes("--" + name);
 
 const owned = new Set(String(arg("owned", "")).split(",").filter(Boolean).map(Number));
 const pool = cards.filter((c) => !c.Reward || owned.has(c.ID));
-const size = Number(arg("size", engine.MAX_DECK));
+const size = Number(arg("size", engine.DEFAULT_DECK));
 const getText = (c) => c.Text || "";
 
 if (flag("all")) {
