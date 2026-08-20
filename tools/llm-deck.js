@@ -94,6 +94,11 @@ That engine is blind to three things, and this is exactly where your judgement i
  2. Effects with no numbers, like "+Fame equal to club tier", which it flattens to a guess.
  3. Two-card combos and named synergies, which it only sees when a card names another card.
 
+It now makes a rough second pass at cards that act on other cards — stat doubling, buffs,
+copies, tier denial, removal, repeatable abilities — but those estimates are crude. Cards like
+Sophie, Moon, Eden, Rizom and Tifa are worth what the board around them makes them worth, and
+judging that properly is your job, not the parser's.
+
 Treat the scores as a prior to argue with, not an answer. Build a deck that actually wins:
 a curve you can cast on time, an economy that never ends a turn below zero money, and a
 fame engine that closes to 100 before the opponent does.`;

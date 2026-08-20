@@ -291,7 +291,34 @@ the valuation more than any single rule does:
   together at tier 4 has already lost to one that curved out at tier 2. The default curve
   (`CURVE`) is weighted low to match: 14/10/8/5/3, normalised to the deck size.
 
-## 9. Modelling notes
+## 9. Cards that act on other cards
+
+The clause parser reads what a card does for *itself*. A large class of strong cards does
+nothing for itself and everything to the board around it, so the parser scored them as filler —
+Sophie, who doubles a member's statline, ranked 244th of 301 at −0.9 points.
+
+`INTERACTIONS` in the engine prices these from the deck's own contents and the tempo model
+(a turn is worth `FAME_GOAL / GAME_LENGTH` fame; an effect earns for the turns left after its
+tier comes online):
+
+| Effect | Priced as |
+| --- | --- |
+| Doubles a member's stats | a second copy of your best board card, for the rest of the game |
+| Buffs a member (+X/+Y) | the added statline over the remaining turns |
+| Copies a member to hand | the best statline available, since you choose the target |
+| Locks a tier out of the opponent's turn | 1.5× a turn's fame |
+| Stops opponent fame gain | a turn's fame per turn it holds |
+| Removes or negates a rival | their card's remaining output |
+| Repeatable ability (once/turn) | a draw engine firing every turn |
+| Repeatable ability (once/tier) | roughly two extra actions |
+| Cannot be targeted | dodges the removal everyone plays around |
+| Returns to hand | ×1.8, because the effect fires again |
+
+Totals are capped (`interactionCap`, default 45) so a card matching several rules cannot run
+away. After this, the cards players rate highly land where they should: Sophie 5th, Moon 10th,
+Tifa 21st, Eden 38th, Rizom 53rd.
+
+## 10. Modelling notes
 
 `data/cards.json` carries each card's static `FamePerTurn` / `MoneyPerTurn`, but most of a
 card's power sits in its rules text and hooks, which the static fields do not express. The

@@ -245,6 +245,9 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
     if (c.ExtraTime) rows.push(["Your timed events last longer", (c.ExtraTime>0?"+":"")+c.ExtraTime+" turns"]);
     if (c.CanActive) rows.push(["Has an ability you can fire", "costs an action"]);
     if (E.hasAny(c, ["Liability"])) rows.push(["Lands in their club, not yours", "clogs a slot"]);
+    for (const hit of E.interactionValue(c, text(c), k).hits) {
+      rows.push([`Effect: ${hit.name}`, (hit.value > 0 ? "+" : "") + hit.value.toFixed(1)]);
+    }
     if (c.Prerequisite) rows.push(["Needs a target before it resolves", "can be stuck in hand"]);
     if (E.tierOf(c) > 1) rows.push([`Locked until club tier ${E.tierOf(c)}`, "late"]);
     return rows;

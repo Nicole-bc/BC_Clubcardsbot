@@ -278,6 +278,7 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
 		actionValue: 8.0,
 		tierPenalty: 0.5,  // small: the lifetime model already prices tiers
 		liabilityValue: 4.0,
+		interactionCap: 45,  // ceiling on board-interaction value for any one card
 		prereqPenalty: 1.5,
 	};
 
@@ -361,8 +362,19 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
 			nameSet.add(c.Name);
 			for (const g of c.Group || []) groupCount.set(g, (groupCount.get(g) || 0) + 1);
 		}
+		// Printed statlines only — used to price cards that act on other cards, without
+		// recursing back into valueCard.
+		const lines = deckCards
+			.filter((c) => (c.Type || "Member") === "Member")
+			.map((c) => Number(c.FamePerTurn || 0) * o.famePoint + Number(c.MoneyPerTurn || 0) * o.moneyPoint)
+			.sort((a, b) => b - a);
+		const topStatline = lines.length ? lines[0] : 2;
+		const goodStatline = lines.length ? lines[Math.min(lines.length - 1, 4)] : 1;
+
 		return {
 			opts: o,
+			topStatline,
+			goodStatline,
 			/** expected number of members with this token on the board */
 			expected(token) {
 				const group = NOUN_TO_GROUP[String(token).toLowerCase()];
@@ -375,6 +387,97 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
 				return e <= 0 ? 0 : 1 - Math.pow(1 - Math.min(0.9, e / o.board), o.board);
 			},
 		};
+	}
+
+	/**
+	 * Cards whose power is what they do to *other* cards — buffs, copies, denial, repeatable
+	 * abilities — carry none of it in a per-turn clause, so the clause parser prices them near
+	 * zero. Each rule below values the effect from the deck's own contents and the tempo model:
+	 * a turn is worth FAME_GOAL / GAME_LENGTH fame, and an effect earns for the turns left
+	 * after its own tier comes online.
+	 */
+	const TURN_WORTH = FAME_GOAL / GAME_LENGTH;
+
+	const INTERACTIONS = [
+		{
+			name: "doubles a member's stats",
+			re: /double (its|their) stats/i,
+			// Adds a second copy of your best board card's output for the rest of the game.
+			value: (ctx, m, life) => ctx.topStatline * life,
+		},
+		{
+			name: "buffs a member",
+			re: /\+(\d+)\/\+(\d+)/,
+			value: (ctx, m, life) =>
+				(Number(m[1]) * ctx.opts.famePoint + Number(m[2]) * ctx.opts.moneyPoint) * life,
+		},
+		{
+			name: "copies a member",
+			re: /copy to your hand|copy of that card/i,
+			// You choose what to copy, so you take the best thing on either board.
+			value: (ctx, m, life) => ctx.topStatline * life * 0.8,
+		},
+		{
+			name: "locks the opponent out of a tier",
+			re: /can't play cards of the selected tier|can't play Events/i,
+			// Denying a turn is worth roughly the fame that turn would have produced.
+			value: () => TURN_WORTH * 1.5,
+		},
+		{
+			name: "stops the opponent gaining fame",
+			re: /can't gain Fame\/turn/i,
+			value: (ctx, m, life) => TURN_WORTH * Math.min(3, life),
+		},
+		{
+			name: "removes a rival",
+			re: /select a rival to remove|to remove|kidnap/i,
+			// Takes their board card off the table for the rest of the game.
+			value: (ctx, m, life) => ctx.goodStatline * life * 0.7,
+		},
+		{
+			name: "negates a member",
+			re: /negate|Ball Gag/i,
+			value: (ctx, m, life) => ctx.goodStatline * life * 0.5,
+		},
+		{
+			name: "cannot be targeted",
+			re: /can't be targeted/i,
+			// Immune to the removal and negation everyone else has to play around.
+			value: (ctx, m, life) => ctx.opts.famePoint * life * 0.5,
+		},
+		{
+			name: "repeatable ability, every turn",
+			re: /Active \(once\/turn\)/i,
+			// A selection or draw engine that fires every turn for the rest of the game.
+			value: (ctx, m, life) => ctx.opts.drawValue * life * 0.5,
+		},
+		{
+			name: "repeatable ability, once per tier",
+			re: /Active \(once\/tier\)/i,
+			value: (ctx) => ctx.opts.actionValue * 2,
+		},
+	];
+
+	/** Sum the interaction rules a card's text matches, capped so nothing runs away. */
+	function interactionValue(card, text, ctx) {
+		if (!text) return { total: 0, hits: [] };
+		const life = tierLifetime(tierOf(card));
+		const hits = [];
+		let total = 0;
+		for (const rule of INTERACTIONS) {
+			const m = rule.re.exec(text);
+			if (!m) continue;
+			const v = rule.value(ctx, m, life);
+			hits.push({ name: rule.name, value: v });
+			total += v;
+		}
+		// A card that comes back to hand runs its effect several times in a 16-turn game.
+		if (/returns? to (your |their )?hand|return this card/i.test(text) && total > 0) {
+			total *= 1.8;
+			hits.push({ name: "returns to hand, so it fires again", value: total / 1.8 * 0.8 });
+		}
+		const cap = ctx.opts.interactionCap;
+		return { total: Math.min(total, cap), hits };
 	}
 
 	/** Estimated contribution of one card, given the deck it sits in. */
@@ -416,6 +519,7 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
 		value += actions * o.actionValue * (recurring ? 2.5 : 1);
 		value += Number(card.ExtraTime || 0) * 3;
 		if (card.CanActive) value += 3;
+		value += interactionValue(card, text, ctx).total;
 		if (hasAny(card, ["Liability"])) value += o.liabilityValue;
 		if (card.Prerequisite) value -= o.prereqPenalty;
 		value -= (tierOf(card) - 1) * o.tierPenalty;
@@ -511,7 +615,8 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
 	return {
 		FAME_GOAL, LEVEL_LIMIT, LEVEL_COST, LIABILITY_LIMIT,
 		MIN_DECK, MAX_DECK, DEFAULT_DECK, DECK_SLOTS, GROUP_FILTERS, DEFAULTS, CURVE,
-		GAME_LENGTH, TIER_ONLINE, tierLifetime, tierOf, hasAny, parseClauses, parseOneShots, deckContext, valueCard,
+		GAME_LENGTH, TIER_ONLINE, tierLifetime, tierOf, hasAny, parseClauses, parseOneShots,
+		deckContext, valueCard, INTERACTIONS, interactionValue,
 		buildDeck, encodeDeck, decodeDeck,
 	};
 });
@@ -5754,6 +5859,9 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
     if (c.ExtraTime) rows.push(["Your timed events last longer", (c.ExtraTime>0?"+":"")+c.ExtraTime+" turns"]);
     if (c.CanActive) rows.push(["Has an ability you can fire", "costs an action"]);
     if (E.hasAny(c, ["Liability"])) rows.push(["Lands in their club, not yours", "clogs a slot"]);
+    for (const hit of E.interactionValue(c, text(c), k).hits) {
+      rows.push([`Effect: ${hit.name}`, (hit.value > 0 ? "+" : "") + hit.value.toFixed(1)]);
+    }
     if (c.Prerequisite) rows.push(["Needs a target before it resolves", "can be stuck in hand"]);
     if (E.tierOf(c) > 1) rows.push([`Locked until club tier ${E.tierOf(c)}`, "late"]);
     return rows;

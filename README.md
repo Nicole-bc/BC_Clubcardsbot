@@ -82,7 +82,10 @@ every archetype the deck builder itself recognises, refines each one three times
 the highest total. Fame is weighted as the win condition; money at roughly 0.4 of a fame
 point, since it only buys tiers and covers upkeep.
 
-`docs/club-cards-research.md` §8 covers tempo, §9 lists where the model is known to be wrong.
+Cards that act on *other* cards — Sophie doubling a statline, Moon copying one, Eden locking a
+tier out of the opponent's turn, Tifa's every-turn ability — carry none of that in a per-turn
+clause, so they get a second valuation pass priced from the deck's contents and the tempo
+model. See `docs/club-cards-research.md` §9; §8 covers tempo and §10 the known gaps.
 
 ## Asking Claude instead
 
