@@ -66,6 +66,7 @@ npm run deck                      # best deck over the base card pool
 npm run deck -- --archetype Maid  # force a tribal build
 npm run deck -- --owned 1234,5678 # include reward cards you have unlocked
 npm run archetypes                # score every archetype against each other
+npm run llm-deck                  # have Claude build a deck and explain it (needs an API key)
 npm run bundle                    # regenerate the userscript after editing src/
 npm run planner                   # regenerate the Deck Lab page
 ```
@@ -81,6 +82,24 @@ the highest total. Fame is weighted as the win condition; money at roughly 0.4 o
 point, since it only buys tiers and covers upkeep.
 
 `docs/club-cards-research.md` §8 lists where the model is known to be wrong.
+
+## Asking Claude instead
+
+The engine parses rules text mechanically, so it cannot see drawbacks ("Leaves if..."),
+effects with no numbers, or two-card combos. `tools/llm-deck.js` sends all 301 cards, their
+rules text and the engine's own scores to Claude, and asks for a deck plus the reasoning —
+then validates the answer against the game's real rules before you trust it.
+
+```
+npm install
+export ANTHROPIC_API_KEY=...       # or: ant auth login
+npm run llm-deck
+npm run llm-deck -- --owned all --brief "beat a fast Maid deck" --size 30
+```
+
+It prints the plan, the cards it built around, where it disagrees with the engine and why,
+the engine's score for its deck next to the engine's own, and a `BCC.saveIds()` command.
+Roughly 15k input tokens a run.
 
 ## How it plays
 

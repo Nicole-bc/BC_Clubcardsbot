@@ -7,6 +7,10 @@
     "bundle": "node tools/bundle.js",
     "planner": "node tools/build-planner.js",
     "deck": "node tools/build-deck.js",
-    "archetypes": "node tools/build-deck.js --all"
+    "archetypes": "node tools/build-deck.js --all",
+    "llm-deck": "node tools/llm-deck.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0"
   }
 }
