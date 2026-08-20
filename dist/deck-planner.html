@@ -479,10 +479,13 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
 
 	/**
 	 * Try every archetype (plus a no-archetype "goodstuff" build) and keep the best.
-	 * @param {object} args - { pool, size, getText, opts, archetype }
+	 * @param {object} args - { pool, size, getText, opts, archetype, maxTier }
 	 */
 	function buildDeck(args) {
-		const pool = (args.pool || []).filter((c) => c && typeof c.ID === "number");
+		const cap = args.maxTier || 5;
+		const pool = (args.pool || [])
+			.filter((c) => c && typeof c.ID === "number")
+			.filter((c) => tierOf(c) <= cap);
 		const size = Math.min(MAX_DECK, Math.max(MIN_DECK, args.size || DEFAULT_DECK));
 		if (pool.length < size) return null;
 		const names = args.archetype ? [args.archetype] : [null].concat(Object.keys(GROUP_FILTERS));
@@ -5885,8 +5888,10 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
   });
   $("clear").addEventListener("click", () => { deck.clear(); render(); });
   $("build").addEventListener("click", () => {
+    // Pressed tier chips constrain the build, not just the browsing view.
+    const pool = state.tiers.size ? CARDS.filter(c => state.tiers.has(E.tierOf(c))) : CARDS;
     const built = E.buildDeck({
-      pool: CARDS, size: Math.max(30, Math.min(40, Number($("size").value)||30)),
+      pool, size: Math.max(30, Math.min(40, Number($("size").value)||30)),
       getText: text, archetype: $("arch").value || null,
     });
     if (!built) return;

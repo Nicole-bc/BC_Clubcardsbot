@@ -281,10 +281,13 @@
 
 	/**
 	 * Try every archetype (plus a no-archetype "goodstuff" build) and keep the best.
-	 * @param {object} args - { pool, size, getText, opts, archetype }
+	 * @param {object} args - { pool, size, getText, opts, archetype, maxTier }
 	 */
 	function buildDeck(args) {
-		const pool = (args.pool || []).filter((c) => c && typeof c.ID === "number");
+		const cap = args.maxTier || 5;
+		const pool = (args.pool || [])
+			.filter((c) => c && typeof c.ID === "number")
+			.filter((c) => tierOf(c) <= cap);
 		const size = Math.min(MAX_DECK, Math.max(MIN_DECK, args.size || DEFAULT_DECK));
 		if (pool.length < size) return null;
 		const names = args.archetype ? [args.archetype] : [null].concat(Object.keys(GROUP_FILTERS));

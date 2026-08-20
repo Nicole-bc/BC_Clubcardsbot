@@ -379,8 +379,10 @@ pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padd
   });
   $("clear").addEventListener("click", () => { deck.clear(); render(); });
   $("build").addEventListener("click", () => {
+    // Pressed tier chips constrain the build, not just the browsing view.
+    const pool = state.tiers.size ? CARDS.filter(c => state.tiers.has(E.tierOf(c))) : CARDS;
     const built = E.buildDeck({
-      pool: CARDS, size: Math.max(30, Math.min(40, Number($("size").value)||30)),
+      pool, size: Math.max(30, Math.min(40, Number($("size").value)||30)),
       getText: text, archetype: $("arch").value || null,
     });
     if (!built) return;

@@ -295,10 +295,13 @@
 
 	/**
 	 * Try every archetype (plus a no-archetype "goodstuff" build) and keep the best.
-	 * @param {object} args - { pool, size, getText, opts, archetype }
+	 * @param {object} args - { pool, size, getText, opts, archetype, maxTier }
 	 */
 	function buildDeck(args) {
-		const pool = (args.pool || []).filter((c) => c && typeof c.ID === "number");
+		const cap = args.maxTier || 5;
+		const pool = (args.pool || [])
+			.filter((c) => c && typeof c.ID === "number")
+			.filter((c) => tierOf(c) <= cap);
 		const size = Math.min(MAX_DECK, Math.max(MIN_DECK, args.size || DEFAULT_DECK));
 		if (pool.length < size) return null;
 		const names = args.archetype ? [args.archetype] : [null].concat(Object.keys(GROUP_FILTERS));
@@ -346,6 +349,7 @@
 		deckSlot: 0,
 		deckSize: 30,   // consistency beats breadth at one draw per turn
 		archetype: null,
+		maxTier: 5,     // cap the tier the builder will reach for
 		autoPickDeck: true,       // answer the deck-selection popup at game start
 		tickMs: 700,
 		actionDelayMs: [900, 1900],
@@ -387,7 +391,8 @@
 	function buildDeck() {
 		if (!ready()) { warn("game not loaded"); return null; }
 		const deck = E.buildDeck({
-			pool: cardPool(), size: CONFIG.deckSize, getText, archetype: CONFIG.archetype,
+			pool: cardPool(), size: CONFIG.deckSize, getText,
+			archetype: CONFIG.archetype, maxTier: CONFIG.maxTier,
 		});
 		if (!deck) { warn("card pool too small"); return null; }
 		log(`built "${deck.archetype || "goodstuff"}" deck — ${deck.ids.length} cards, score ${deck.score.toFixed(1)}`);

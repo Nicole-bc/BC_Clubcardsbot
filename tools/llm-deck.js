@@ -75,6 +75,10 @@ cards land around turn 12 and earn for roughly three turns, while a tier 1 card 
 fourteen. Expensive cards must therefore be dramatically better, not slightly better, and a
 deck that only comes together at tier 4 has already lost to a deck that curved out at tier 2.
 
+Decks that stop at tier 3 are proven — a tier 1-3 build reaching 100 fame in 17 turns beats a
+deck still assembling its tier 5 payoff. Reach past tier 3 only for a card that genuinely wins
+the game, not for a better statline.
+
 Deck size is a real decision, not a formality. You draw one card per turn and no card appears
 twice, so a 30-card deck reaches any particular card about a third sooner than a 40-card one.
 Most competitive players run 30. Build at 30 unless the deck genuinely needs the extra breadth,

@@ -5,6 +5,7 @@
  *   node tools/build-deck.js                     best archetype, 30 cards
  *   node tools/build-deck.js --archetype Maid    force an archetype
  *   node tools/build-deck.js --size 40           wider deck, less consistent
+   node tools/build-deck.js --max-tier 3        nothing above tier 3
  *   node tools/build-deck.js --owned 1234,5678   also allow these reward card IDs
  *   node tools/build-deck.js --all               score every archetype
  */
@@ -37,7 +38,8 @@ if (flag("all")) {
 	process.exit(0);
 }
 
-const deck = engine.buildDeck({ pool, size, getText, archetype: arg("archetype", null) });
+const maxTier = Number(arg("max-tier", 5));
+const deck = engine.buildDeck({ pool, size, getText, archetype: arg("archetype", null), maxTier });
 if (!deck) { console.error("pool too small"); process.exit(1); }
 
 console.log(`archetype : ${deck.archetype || "(goodstuff)"}`);

@@ -15,6 +15,7 @@
 		deckSlot: 0,
 		deckSize: 30,   // consistency beats breadth at one draw per turn
 		archetype: null,
+		maxTier: 5,     // cap the tier the builder will reach for
 		autoPickDeck: true,       // answer the deck-selection popup at game start
 		tickMs: 700,
 		actionDelayMs: [900, 1900],
@@ -56,7 +57,8 @@
 	function buildDeck() {
 		if (!ready()) { warn("game not loaded"); return null; }
 		const deck = E.buildDeck({
-			pool: cardPool(), size: CONFIG.deckSize, getText, archetype: CONFIG.archetype,
+			pool: cardPool(), size: CONFIG.deckSize, getText,
+			archetype: CONFIG.archetype, maxTier: CONFIG.maxTier,
 		});
 		if (!deck) { warn("card pool too small"); return null; }
 		log(`built "${deck.archetype || "goodstuff"}" deck — ${deck.ids.length} cards, score ${deck.score.toFixed(1)}`);

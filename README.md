@@ -65,6 +65,7 @@ Offline, without the game running:
 npm run deck                      # best deck over the base card pool
 npm run deck -- --archetype Maid  # force a tribal build
 npm run deck -- --owned 1234,5678 # include reward cards you have unlocked
+npm run deck -- --max-tier 3      # nothing above tier 3
 npm run archetypes                # score every archetype against each other
 npm run llm-deck                  # have Claude build a deck and explain it (needs an API key)
 npm run bundle                    # regenerate the userscript after editing src/
