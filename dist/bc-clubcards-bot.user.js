@@ -404,7 +404,51 @@
 		return ids;
 	}
 
-	const saveDeck = (slot) => { const d = buildDeck(); return d && saveIds(d.ids, slot); };
+	/** What is in each of the 10 deck slots. */
+	function slots() {
+		if (!ready()) { warn("game not loaded"); return null; }
+		const cc = Player.Game.ClubCard || {};
+		const rows = [];
+		for (let i = 0; i < E.DECK_SLOTS; i++) {
+			const deck = (cc.Deck || [])[i] || "";
+			rows.push({
+				slot: i,
+				name: ((cc.DeckName || [])[i] || "").trim() || `Deck #${i + 1}`,
+				cards: deck.length,
+				status: deck.length === 0 ? "empty"
+					: deck.length < E.MIN_DECK || deck.length > E.MAX_DECK ? "INVALID" : "ok",
+			});
+		}
+		console.table(rows);
+		return rows;
+	}
+
+	const firstEmptySlot = () => {
+		const decks = (Player.Game.ClubCard && Player.Game.ClubCard.Deck) || [];
+		for (let i = 0; i < E.DECK_SLOTS; i++) if (!decks[i] || decks[i].length === 0) return i;
+		return null;
+	};
+
+	/**
+	 * Build a deck and write it to a slot. With no slot given it takes the first empty
+	 * one so an existing deck is never silently replaced.
+	 */
+	function saveDeck(slot) {
+		const deck = buildDeck();
+		if (!deck) return null;
+		let target = slot;
+		if (target == null) {
+			target = firstEmptySlot();
+			if (target == null) {
+				warn(`all ${E.DECK_SLOTS} slots are full — pass one explicitly, e.g. BCC.save(0). Current slots:`);
+				slots();
+				return null;
+			}
+		}
+		const existing = ((Player.Game.ClubCard || {}).Deck || [])[target] || "";
+		if (existing.length) log(`slot ${target} holds ${existing.length} cards — replacing it`);
+		return saveIds(deck.ids, target) && { slot: target, ids: deck.ids, archetype: deck.archetype };
+	}
 
 	/**
 	 * Unlock every reward card by writing them all into Player.Game.ClubCard.Reward,
@@ -640,7 +684,7 @@
 	}
 
 	window.BCC = {
-		config: CONFIG, probe, build: buildDeck, save: saveDeck, saveIds, step, engine: E,
+		config: CONFIG, probe, build: buildDeck, save: saveDeck, saveIds, slots, step, engine: E,
 		unlockAll, restoreUnlocks,
 		start() {
 			CONFIG.autoplay = true;

@@ -3,8 +3,13 @@
 Deck builder and autoplay bot for **Club Cards**, the card minigame inside
 [Bondage Club](https://www.bondageprojects.com/club_game/).
 
+**[Deck Lab](https://claude.ai/code/artifact/b52c4c6f-1527-462b-8370-c2ab7c917688)** — an
+interactive planner for all 301 cards. Click any card's rules text to see exactly why the
+engine values it the way it does, given the deck you have so far.
+
 ```
 dist/bc-clubcards-bot.user.js   the installable userscript (generated)
+dist/deck-planner.html          the Deck Lab page (generated)
 src/deck-engine.js              card valuation + deck construction
 src/bot.js                      game driving
 data/cards.json                 all 301 cards, extracted from ClubCard.js R131
@@ -31,9 +36,12 @@ adding more would leak board state the opponent is not meant to see mid-turn.
 
 ```js
 BCC.probe()               // live state: pool size, tables, seat, whose turn
+BCC.slots()               // what is in each of your 10 deck slots
 BCC.build()               // build a deck and print it (never saves)
 BCC.config.dryRun = false // required before anything is written or played
-BCC.save(0)               // write the deck into deck slot 0
+BCC.save()                // write to the first empty slot
+BCC.save(3)               // or a specific one
+BCC.saveIds([...], 3)     // save a deck planned in the Deck Lab
 BCC.start()               // autoplay
 BCC.stop()
 ```
@@ -58,7 +66,8 @@ npm run deck                      # best deck over the base card pool
 npm run deck -- --archetype Maid  # force a tribal build
 npm run deck -- --owned 1234,5678 # include reward cards you have unlocked
 npm run archetypes                # score every archetype against each other
-npm run bundle                    # regenerate dist/ after editing src/
+npm run bundle                    # regenerate the userscript after editing src/
+npm run planner                   # regenerate the Deck Lab page
 ```
 
 ## How the deck is built

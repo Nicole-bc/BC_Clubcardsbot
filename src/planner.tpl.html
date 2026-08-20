@@ -1,0 +1,406 @@
+<title>Club Cards Deck Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,700&family=Archivo:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#f6f3f1; --surface:#fffdfc; --raise:#efe9e9; --ink:#241f27; --ink-soft:#6c6270;
+  --line:#e0d8dd; --line-hard:#cfc4cc;
+  --fame:#9a6b12; --fame-fill:#d9a441; --money:#2f6f57; --money-fill:#6fae94;
+  --liability:#a63f52; --accent:#6d3f7a; --shadow:0 1px 2px rgba(36,31,39,.08);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#161219; --surface:#1e1823; --raise:#282030; --ink:#ede7f1; --ink-soft:#9c90a6;
+  --line:#2f2637; --line-hard:#443a4e;
+  --fame:#e0af52; --fame-fill:#d9a441; --money:#7cc0a3; --money-fill:#6fae94;
+  --liability:#d4707f; --accent:#c49ad4; --shadow:0 1px 2px rgba(0,0,0,.4);
+}}
+:root[data-theme="dark"]{
+  --ground:#161219; --surface:#1e1823; --raise:#282030; --ink:#ede7f1; --ink-soft:#9c90a6;
+  --line:#2f2637; --line-hard:#443a4e;
+  --fame:#e0af52; --fame-fill:#d9a441; --money:#7cc0a3; --money-fill:#6fae94;
+  --liability:#d4707f; --accent:#c49ad4; --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:Archivo,"Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.5}
+h1,h2,h3{margin:0;text-wrap:balance}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.masthead{border-bottom:1px solid var(--line);background:var(--surface);padding:20px 24px 16px}
+.masthead h1{font-family:"Bodoni Moda",Georgia,serif;font-weight:700;font-size:30px;letter-spacing:-.01em}
+.lede{margin:6px 0 0;color:var(--ink-soft);max-width:64ch;font-size:14px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px}
+.controls label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft)}
+select,input[type=text],input[type=number]{background:var(--ground);color:var(--ink);
+  border:1px solid var(--line-hard);border-radius:5px;padding:7px 9px;font:inherit;font-size:14px}
+input[type=text]{min-width:200px}
+.btn{background:var(--accent);color:var(--surface);border:0;border-radius:5px;padding:8px 14px;
+  font-weight:600;cursor:pointer}
+.btn:hover{filter:brightness(1.1)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line-hard)}
+
+.console{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:0;align-items:start}
+@media (max-width:1040px){.console{grid-template-columns:1fr}}
+
+.pool{min-width:0;padding:16px 24px 60px}
+.filterbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.tierchips{display:flex;gap:4px}
+.chip{border:1px solid var(--line-hard);background:transparent;border-radius:999px;
+  padding:4px 11px;font-size:13px;cursor:pointer;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.count{margin-left:auto;color:var(--ink-soft);font-size:13px;font-variant-numeric:tabular-nums}
+
+.roster{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.card{display:grid;grid-template-columns:34px minmax(0,1fr) 92px 116px 46px;gap:10px;align-items:baseline;
+  padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer}
+.card:hover{background:var(--surface)}
+.card[data-in="1"]{background:var(--raise);box-shadow:inset 3px 0 0 var(--accent)}
+.tier{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-soft);
+  border:1px solid var(--line-hard);border-radius:4px;padding:1px 0;text-align:center}
+.nm{font-weight:500}
+.rules{display:block;color:var(--ink-soft);font-size:12.5px;margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat{font-family:"JetBrains Mono",monospace;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.f{color:var(--fame)} .m{color:var(--money)}
+.tags{display:flex;gap:3px;flex-wrap:wrap}
+.tag{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);
+  border:1px solid var(--line);border-radius:3px;padding:1px 4px}
+.tag.lia{color:var(--liability);border-color:var(--liability)}
+.val{font-family:"JetBrains Mono",monospace;font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.val.neg{color:var(--liability)}
+.met{color:var(--money)}
+
+.deck{position:sticky;top:0;max-height:100vh;overflow-y:auto;border-left:1px solid var(--line);
+  background:var(--surface);padding:16px 18px 48px}
+.deck h2{font-family:"Bodoni Moda",Georgia,serif;font-size:19px;font-weight:700}
+.panel{border-top:1px solid var(--line);padding-top:12px;margin-top:14px}
+.panel h3{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
+.meter{display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums}
+.meter b{font-family:"Bodoni Moda",Georgia,serif;font-size:34px;line-height:1}
+.meter .of{color:var(--ink-soft);font-size:13px}
+.bar{height:6px;background:var(--raise);border-radius:3px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.legal{font-size:12.5px;margin-top:6px}
+.legal.ok{color:var(--money)} .legal.no{color:var(--liability)}
+
+.curve{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;align-items:end;height:74px}
+.curve div{display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:4px}
+.curve i{display:block;flex:0 0 auto;background:var(--fame-fill);border-radius:2px 2px 0 0;min-height:2px;width:100%}
+.curve span{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-soft);text-align:center}
+
+.figures{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fig{background:var(--ground);border:1px solid var(--line);border-radius:6px;padding:9px 10px}
+.fig b{display:block;font-family:"JetBrains Mono",monospace;font-size:19px;font-variant-numeric:tabular-nums}
+.fig span{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+
+.density{display:flex;flex-direction:column;gap:5px}
+.den{display:grid;grid-template-columns:106px 1fr 26px;gap:7px;align-items:center;font-size:12.5px}
+.den i{display:block;height:7px;background:var(--money-fill);border-radius:2px;min-width:2px}
+.den em{font-family:"JetBrains Mono",monospace;font-style:normal;color:var(--ink-soft);
+  text-align:right;font-variant-numeric:tabular-nums}
+
+.decklist{list-style:none;margin:0;padding:0;font-size:13.5px}
+.decklist li{display:grid;grid-template-columns:20px 1fr auto;gap:7px;padding:3px 0;
+  border-bottom:1px solid var(--line);cursor:pointer}
+.decklist li:hover{color:var(--liability)}
+.decklist .t{font-family:"JetBrains Mono",monospace;color:var(--ink-soft);font-size:11.5px}
+
+pre{background:var(--ground);border:1px solid var(--line);border-radius:6px;padding:10px;
+  font-family:"JetBrains Mono",monospace;font-size:11.5px;overflow-x:auto;margin:0;
+  white-space:pre-wrap;word-break:break-all}
+.hint{font-size:12px;color:var(--ink-soft);margin:6px 0 0}
+
+.sheet{position:fixed;inset:auto 0 0;background:var(--surface);border-top:1px solid var(--line-hard);
+  box-shadow:0 -8px 30px rgba(0,0,0,.16);padding:16px 22px;max-height:56vh;overflow-y:auto;display:none}
+.sheet[open]{display:block}
+.sheet h3{font-family:"Bodoni Moda",Georgia,serif;font-size:21px;font-weight:700}
+.sheet .close{position:absolute;top:12px;right:16px}
+.breakdown{list-style:none;margin:10px 0 0;padding:0;max-width:70ch}
+.breakdown li{display:grid;grid-template-columns:1fr auto;gap:12px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.breakdown b{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums;font-weight:400}
+</style>
+
+<header class="masthead">
+  <h1>Club Cards Deck Lab</h1>
+  <p class="lede">Every card in Bondage Club's card game, valued against the deck you are actually
+    building — a payoff that scales per Maid ally is worth what your Maid count says it is worth,
+    and nothing more. Build by hand, or let the engine open with a suggestion and argue with it.</p>
+  <div class="controls">
+    <label for="arch">Archetype</label>
+    <select id="arch"></select>
+    <label for="size">Cards</label>
+    <input type="number" id="size" min="30" max="40" value="40">
+    <button class="btn" id="build">Build deck</button>
+    <button class="btn ghost" id="clear">Clear</button>
+    <label for="import">Load</label>
+    <input type="text" id="import" placeholder="paste card IDs or a deck string">
+  </div>
+</header>
+
+<main class="console">
+  <section class="pool">
+    <div class="filterbar">
+      <input type="text" id="q" placeholder="Search name or rules text">
+      <select id="tag"></select>
+      <div class="tierchips" id="tiers"></div>
+      <select id="sort">
+        <option value="value">Sort by value</option>
+        <option value="tier">Sort by tier</option>
+        <option value="fame">Sort by fame</option>
+        <option value="money">Sort by money</option>
+        <option value="name">Sort by name</option>
+      </select>
+      <span class="count" id="count"></span>
+    </div>
+    <ol class="roster" id="roster"></ol>
+  </section>
+
+  <aside class="deck">
+    <h2>Your club</h2>
+    <div class="meter"><b id="deckN">0</b><span class="of">of 30–40 cards</span></div>
+    <div class="bar"><i id="deckBar" style="width:0%"></i></div>
+    <p class="legal" id="legal">Empty deck.</p>
+
+    <div class="panel"><h3>Tier curve</h3><div class="curve" id="curve"></div></div>
+
+    <div class="panel"><h3>If the whole deck deployed</h3>
+      <div class="figures">
+        <div class="fig"><b class="f" id="sumFame">0</b><span>Fame / turn</span></div>
+        <div class="fig"><b class="m" id="sumMoney">0</b><span>Money / turn</span></div>
+        <div class="fig"><b id="sumScore">0</b><span>Engine score</span></div>
+        <div class="fig"><b id="sumMembers">0</b><span>Members / events</span></div>
+      </div>
+      <p class="hint" id="upkeep"></p>
+    </div>
+
+    <div class="panel"><h3>Tribe density</h3><div class="density" id="density"></div></div>
+
+    <div class="panel"><h3>Deck list</h3><ol class="decklist" id="decklist"></ol></div>
+
+    <div class="panel"><h3>Load it in game</h3>
+      <pre id="export">Add cards to build a deck.</pre>
+      <button class="btn ghost" id="copy" style="margin-top:8px">Copy command</button>
+      <p class="hint">Paste into the browser console with the bot userscript installed.
+        <code>BCC.save()</code> takes the first free slot; pass a number for a specific one.</p>
+    </div>
+  </aside>
+</main>
+
+<div class="sheet" id="sheet">
+  <button class="btn ghost close" id="closeSheet">Close</button>
+  <h3 id="sheetName"></h3>
+  <p class="lede" id="sheetText"></p>
+  <ul class="breakdown" id="sheetBreak"></ul>
+</div>
+
+<script>/*ENGINE*/</script>
+<script>const CARDS=/*CARDS*/;</script>
+<script>
+(function(){
+  "use strict";
+  const E = CCEngine;
+  const $ = (id) => document.getElementById(id);
+  const deck = new Set();
+  const state = { q:"", tag:"", tiers:new Set(), sort:"value" };
+  const text = (c) => c.Text || "";
+  const title = (c) => c.Title || c.Name;
+  const isMember = (c) => (c.Type || "Member") === "Member";
+
+  // --- valuation against the current deck -------------------------------
+  function ctx(){
+    const cards = deck.size ? CARDS.filter(c => deck.has(c.ID)) : CARDS.slice(0, 40);
+    return E.deckContext(cards, {});
+  }
+  const value = (c, k) => E.valueCard(c, k, text);
+
+  /** Human-readable reason a card is worth what it is worth. */
+  function explain(c, k){
+    const rows = [];
+    if (c.FamePerTurn) rows.push(["Printed fame each turn", (c.FamePerTurn>0?"+":"")+c.FamePerTurn]);
+    if (c.MoneyPerTurn) rows.push(["Printed money each turn", (c.MoneyPerTurn>0?"+":"")+c.MoneyPerTurn]);
+    for (const cl of E.parseClauses(text(c))){
+      const sign = cl.amount > 0 ? "+" : "";
+      if (cl.kind === "flat"){ rows.push([`${sign}${cl.amount} ${cl.stat} each turn`, "always"]); continue; }
+      const n = k.expected(cl.token);
+      if (cl.kind === "per"){
+        let got = cl.amount * n;
+        if (cl.cap != null) got = Math.sign(got) * Math.min(Math.abs(got), cl.cap);
+        rows.push([`${sign}${cl.amount} ${cl.stat} per ${cl.token} — your deck fields about ${n.toFixed(1)}`,
+          (got>0?"+":"")+got.toFixed(1)]);
+      } else {
+        const p = k.present(cl.token);
+        rows.push([`${sign}${cl.amount} ${cl.stat} while a ${cl.token} is out — ${Math.round(p*100)}% likely here`,
+          (cl.amount*p>0?"+":"")+(cl.amount*p).toFixed(1)]);
+      }
+    }
+    const s = E.parseOneShots(text(c));
+    if (s.fame) rows.push(["One-off fame", (s.fame>0?"+":"")+s.fame]);
+    if (s.money) rows.push(["One-off money", (s.money>0?"+":"")+s.money]);
+    if (s.draws) rows.push(["Cards drawn", "+"+s.draws]);
+    const acts = c.ExtraPlay != null ? c.ExtraPlay : s.actions;
+    if (acts) rows.push([c.ExtraPlay != null ? "Extra plays every turn" : "Extra plays, once", (acts>0?"+":"")+acts]);
+    if (c.ExtraTime) rows.push(["Your timed events last longer", (c.ExtraTime>0?"+":"")+c.ExtraTime+" turns"]);
+    if (c.CanActive) rows.push(["Has an ability you can fire", "costs an action"]);
+    if (E.hasAny(c, ["Liability"])) rows.push(["Lands in their club, not yours", "clogs a slot"]);
+    if (c.Prerequisite) rows.push(["Needs a target before it resolves", "can be stuck in hand"]);
+    if (E.tierOf(c) > 1) rows.push([`Locked until club tier ${E.tierOf(c)}`, "late"]);
+    return rows;
+  }
+
+  // --- rendering ---------------------------------------------------------
+  const tagNames = Object.keys(E.GROUP_FILTERS);
+
+  function matches(c){
+    if (state.tiers.size && !state.tiers.has(E.tierOf(c))) return false;
+    if (state.tag && !E.GROUP_FILTERS[state.tag](c)) return false;
+    if (state.q){
+      const q = state.q.toLowerCase();
+      if (!title(c).toLowerCase().includes(q) && !text(c).toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }
+
+  function renderPool(){
+    const k = ctx();
+    const rows = CARDS.filter(matches).map(c => ({ c, v: value(c, k) }));
+    rows.sort((a,b) => {
+      switch(state.sort){
+        case "tier": return E.tierOf(a.c)-E.tierOf(b.c) || b.v-a.v;
+        case "fame": return (b.c.FamePerTurn||0)-(a.c.FamePerTurn||0);
+        case "money": return (b.c.MoneyPerTurn||0)-(a.c.MoneyPerTurn||0);
+        case "name": return title(a.c).localeCompare(title(b.c));
+        default: return b.v-a.v;
+      }
+    });
+    $("count").textContent = `${rows.length} of ${CARDS.length} cards`;
+    $("roster").innerHTML = rows.map(({c,v}) => {
+      const tags = (c.Group||[]).slice(0,3).map(g =>
+        `<span class="tag${g==="Liability"?" lia":""}">${g}</span>`).join("");
+      const f = c.FamePerTurn ? `<span class="f">${c.FamePerTurn>0?"+":""}${c.FamePerTurn}f</span>` : "";
+      const m = c.MoneyPerTurn ? `<span class="m">${c.MoneyPerTurn>0?"+":""}${c.MoneyPerTurn}$</span>` : "";
+      return `<li class="card" data-id="${c.ID}" data-in="${deck.has(c.ID)?1:0}">
+        <span class="tier">T${E.tierOf(c)}</span>
+        <span><span class="nm">${title(c)}</span>
+          <span class="rules">${text(c) || (isMember(c)?"No rules text.":"Event.")}</span></span>
+        <span class="stat">${f} ${m}</span>
+        <span class="tags">${tags}</span>
+        <span class="val${v<0?" neg":""}">${v.toFixed(1)}</span></li>`;
+    }).join("");
+  }
+
+  function renderDeck(){
+    const k = ctx();
+    const cards = CARDS.filter(c => deck.has(c.ID));
+    const n = cards.length;
+    $("deckN").textContent = n;
+    $("deckBar").style.width = Math.min(100, (n/E.MAX_DECK)*100) + "%";
+    const legal = n >= E.MIN_DECK && n <= E.MAX_DECK;
+    $("legal").className = "legal " + (n===0 ? "" : legal ? "ok" : "no");
+    $("legal").textContent = n===0 ? "Empty deck."
+      : legal ? "Legal — the game will accept this deck."
+      : n < E.MIN_DECK ? `${E.MIN_DECK-n} more card${E.MIN_DECK-n===1?"":"s"} needed.`
+      : `${n-E.MAX_DECK} too many.`;
+
+    const byTier = [1,2,3,4,5].map(t => cards.filter(c => E.tierOf(c)===t).length);
+    const peak = Math.max(1, ...byTier);
+    $("curve").innerHTML = byTier.map((v,i) =>
+      `<div><i style="height:${Math.round((v/peak)*42)+2}px"></i><span>T${i+1}</span><span>${v}</span></div>`).join("");
+
+    const fame = cards.reduce((s,c)=>s+(c.FamePerTurn||0),0);
+    const money = cards.reduce((s,c)=>s+(c.MoneyPerTurn||0),0);
+    $("sumFame").textContent = (fame>0?"+":"")+fame;
+    $("sumMoney").textContent = (money>0?"+":"")+money;
+    $("sumScore").textContent = cards.reduce((s,c)=>s+value(c,k),0).toFixed(0);
+    $("sumMembers").textContent = `${cards.filter(isMember).length}/${cards.filter(c=>!isMember(c)).length}`;
+    $("upkeep").textContent = money < 0
+      ? `Printed upkeep runs ${Math.abs(money)} a turn. A turn that ends below zero money cancels that turn's fame, so the deck has to earn it back.`
+      : "Printed income covers itself before any card text is counted.";
+
+    const den = tagNames.map(t => ({ t, n: cards.filter(E.GROUP_FILTERS[t]).length }))
+      .filter(d => d.n > 0).sort((a,b) => b.n-a.n).slice(0, 7);
+    const dmax = Math.max(1, ...den.map(d=>d.n));
+    $("density").innerHTML = den.length ? den.map(d =>
+      `<div class="den"><span>${d.t}</span><i style="width:${(d.n/dmax)*100}%"></i><em>${d.n}</em></div>`).join("")
+      : `<p class="hint">Nothing yet.</p>`;
+
+    $("decklist").innerHTML = cards.sort((a,b)=>E.tierOf(a)-E.tierOf(b)||title(a).localeCompare(title(b)))
+      .map(c => `<li data-id="${c.ID}" title="Click to remove">
+        <span class="t">T${E.tierOf(c)}</span><span>${title(c)}</span>
+        <span class="t">${value(c,k).toFixed(0)}</span></li>`).join("");
+
+    const ids = cards.map(c=>c.ID);
+    $("export").textContent = n ? `BCC.saveIds(${JSON.stringify(ids)})` : "Add cards to build a deck.";
+  }
+
+  const render = () => { renderPool(); renderDeck(); };
+
+  // --- inspector ---------------------------------------------------------
+  function inspect(id){
+    const c = CARDS.find(x => x.ID === id);
+    if (!c) return;
+    const k = ctx();
+    $("sheetName").textContent = `${title(c)} — tier ${E.tierOf(c)} ${isMember(c)?"member":"event"}`;
+    $("sheetText").textContent = text(c) || "No rules text.";
+    $("sheetBreak").innerHTML = explain(c, k).map(([label, amt]) =>
+      `<li><span>${label}</span><b>${amt}</b></li>`).join("")
+      + `<li><span><b>Value in this deck</b></span><b>${value(c,k).toFixed(1)}</b></li>`;
+    $("sheet").setAttribute("open","");
+  }
+
+  // --- wiring ------------------------------------------------------------
+  $("tag").innerHTML = `<option value="">All tags</option>` + tagNames.map(t=>`<option>${t}</option>`).join("");
+  $("arch").innerHTML = `<option value="">Best archetype</option>` + tagNames.map(t=>`<option>${t}</option>`).join("");
+  $("tiers").innerHTML = [1,2,3,4,5].map(t=>`<button class="chip" data-tier="${t}" aria-pressed="false">T${t}</button>`).join("");
+
+  $("roster").addEventListener("click", (e) => {
+    const li = e.target.closest(".card"); if (!li) return;
+    const id = Number(li.dataset.id);
+    if (e.detail === 2 || e.target.closest(".rules")) return inspect(id);
+    deck.has(id) ? deck.delete(id) : deck.add(id);
+    render();
+  });
+  $("decklist").addEventListener("click", (e) => {
+    const li = e.target.closest("li"); if (!li) return;
+    deck.delete(Number(li.dataset.id)); render();
+  });
+  $("closeSheet").addEventListener("click", () => $("sheet").removeAttribute("open"));
+  $("q").addEventListener("input", (e) => { state.q = e.target.value.trim(); renderPool(); });
+  $("tag").addEventListener("change", (e) => { state.tag = e.target.value; renderPool(); });
+  $("sort").addEventListener("change", (e) => { state.sort = e.target.value; renderPool(); });
+  $("tiers").addEventListener("click", (e) => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    const t = Number(b.dataset.tier);
+    state.tiers.has(t) ? state.tiers.delete(t) : state.tiers.add(t);
+    b.setAttribute("aria-pressed", state.tiers.has(t) ? "true" : "false");
+    renderPool();
+  });
+  $("clear").addEventListener("click", () => { deck.clear(); render(); });
+  $("build").addEventListener("click", () => {
+    const built = E.buildDeck({
+      pool: CARDS, size: Math.max(30, Math.min(40, Number($("size").value)||40)),
+      getText: text, archetype: $("arch").value || null,
+    });
+    if (!built) return;
+    deck.clear(); built.ids.forEach(id => deck.add(id));
+    if (!$("arch").value) $("arch").value = built.archetype || "";
+    render();
+  });
+  $("import").addEventListener("change", (e) => {
+    const raw = e.target.value.trim(); if (!raw) return;
+    let ids = raw.match(/\d{3,5}/g) ? raw.match(/\d{3,5}/g).map(Number) : E.decodeDeck(raw);
+    ids = ids.filter(id => CARDS.some(c => c.ID === id));
+    if (!ids.length) { e.target.value = ""; return; }
+    deck.clear(); ids.forEach(id => deck.add(id)); render();
+  });
+  $("copy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText($("export").textContent);
+      $("copy").textContent = "Copied"; setTimeout(()=>$("copy").textContent="Copy command", 1400);
+    } catch (err) { $("copy").textContent = "Select the text above"; }
+  });
+
+  render();
+})();
+</script>
