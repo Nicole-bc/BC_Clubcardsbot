@@ -406,6 +406,34 @@
 
 	const saveDeck = (slot) => { const d = buildDeck(); return d && saveIds(d.ids, slot); };
 
+	/**
+	 * Unlock every reward card by writing them all into Player.Game.ClubCard.Reward,
+	 * the same charCode-per-ID string ClubCardBuilderFilterLoad checks against.
+	 * Returns the previous value so it can be handed back to restoreUnlocks().
+	 */
+	function unlockAll() {
+		if (!ready()) { warn("game not loaded"); return null; }
+		const cc = Player.Game.ClubCard;
+		const before = cc.Reward || "";
+		const all = ClubCardList.filter((c) => c.Reward).map((c) => String.fromCharCode(c.ID)).join("");
+		log(`unlocking ${all.length} reward cards (currently ${before.length})`);
+		if (CONFIG.dryRun) { log("dryRun: nothing written. Set BCC.config.dryRun = false first."); return before; }
+		cc.Reward = all;
+		ServerAccountUpdate.QueueData({ Game: Player.Game }, true);
+		log("done — reopen the deck builder to see them. Backup:", JSON.stringify(before));
+		return before;
+	}
+
+	/** Put the reward string back the way it was: BCC.restoreUnlocks(backup). */
+	function restoreUnlocks(backup) {
+		if (typeof backup !== "string") { warn("pass the string unlockAll() returned"); return null; }
+		if (CONFIG.dryRun) { log("dryRun: nothing written."); return backup; }
+		Player.Game.ClubCard.Reward = backup;
+		ServerAccountUpdate.QueueData({ Game: Player.Game }, true);
+		log(`restored ${backup.length} reward cards`);
+		return backup;
+	}
+
 	// ---------------------------------------------------------------- valuation
 
 	function context(me) {
@@ -613,6 +641,7 @@
 
 	window.BCC = {
 		config: CONFIG, probe, build: buildDeck, save: saveDeck, saveIds, step, engine: E,
+		unlockAll, restoreUnlocks,
 		start() {
 			CONFIG.autoplay = true;
 			if (!timer) timer = setInterval(tick, CONFIG.tickMs);

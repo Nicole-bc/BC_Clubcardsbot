@@ -42,6 +42,15 @@ Two guards are on by default: `dryRun` narrates every decision without acting, a
 `allowOnline` refuses to act in a game against another player. Start with a practice game
 against the Lounge tutor, watch the console with `dryRun` on, then turn it off.
 
+Unlocking the 23 reward cards (normally won off specific NPCs) — this writes to your
+account on the server, so keep the backup string it returns:
+
+```js
+BCC.config.dryRun = false
+const backup = BCC.unlockAll()   // adds all reward cards to the builder
+BCC.restoreUnlocks(backup)       // puts it back
+```
+
 Offline, without the game running:
 
 ```
