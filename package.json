@@ -8,7 +8,8 @@
     "planner": "node tools/build-planner.js",
     "deck": "node tools/build-deck.js",
     "archetypes": "node tools/build-deck.js --all",
-    "llm-deck": "node tools/llm-deck.js"
+    "llm-deck": "node tools/llm-deck.js",
+    "sim": "node tools/simulate.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0"

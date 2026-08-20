@@ -318,7 +318,22 @@ Totals are capped (`interactionCap`, default 45) so a card matching several rule
 away. After this, the cards players rate highly land where they should: Sophie 5th, Moon 10th,
 Tifa 21st, Eden 38th, Rizom 53rd.
 
-## 10. Modelling notes
+## 10. Playing a card costs you your draw
+
+`ClubCardStartTurn` ends the turn with `ClubCardEndTurn(ClubCardTurnCardPlayed == 0)`, so the
+draw only happens on a turn where **nothing was played**. Every turn is a choice between
+developing and drawing.
+
+The consequences run through everything:
+
+- Across a 16-turn game you see roughly your opening 5 or 6 cards, the free Tips, and one card
+  for each turn you chose to pass. Simulation puts members actually deployed at **7 to 9 per
+  game** — a 30-card deck plays about a quarter of itself.
+- Card quality dominates card count, and the minimum deck size is almost always right.
+- Effects that draw or grant extra actions are premium: they are the only way to develop and
+  see new cards in the same turn.
+
+## 11. Modelling notes
 
 `data/cards.json` carries each card's static `FamePerTurn` / `MoneyPerTurn`, but most of a
 card's power sits in its rules text and hooks, which the static fields do not express. The

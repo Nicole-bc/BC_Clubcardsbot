@@ -68,6 +68,8 @@ npm run deck -- --owned 1234,5678 # include reward cards you have unlocked
 npm run deck -- --max-tier 3      # nothing above tier 3
 npm run archetypes                # score every archetype against each other
 npm run llm-deck                  # have Claude build a deck and explain it (needs an API key)
+npm run sim                       # play decks out against the clock, 400 games each
+npm run sim -- --ids 7000,7001,…  # simulate a specific deck
 npm run bundle                    # regenerate the userscript after editing src/
 npm run planner                   # regenerate the Deck Lab page
 ```
@@ -86,6 +88,30 @@ Cards that act on *other* cards — Sophie doubling a statline, Moon copying one
 tier out of the opponent's turn, Tifa's every-turn ability — carry none of that in a per-turn
 clause, so they get a second valuation pass priced from the deck's contents and the tempo
 model. See `docs/club-cards-research.md` §9; §8 covers tempo and §10 the known gaps.
+
+## Does the deck actually win in time?
+
+Scores are a proxy. `tools/simulate.js` plays the deck out 400 times against the real clock,
+modelling the rules that decide games: one action a turn, **playing a card means you do not
+draw that turn**, members pay out at end of turn, money below zero cancels that turn's fame,
+and tiers gate both what you can play and how much board you have.
+
+It ignores card hooks, targeting and the opponent, so the absolute turn numbers are
+pessimistic — a real Sophie or Tifa does far more than the simulator gives her credit for.
+Use it to compare decks, not to predict a specific game.
+
+What it says about the current engine, 400 games each:
+
+| Deck | reaches 100 | median turn | by turn 17 | avg tier |
+| --- | --- | --- | --- | --- |
+| engine, tier 1-3, 30 cards | 52% | 20 | **10%** | 2.4 |
+| engine, any tier, 30 cards | 36% | 20 | 4% | 2.0 |
+| engine, any tier, 40 cards | 46% | 21 | 4% | 2.3 |
+| the game's own "Default" precon | **85%** | 21 | 4% | 3.8 |
+
+The precon reaches 100 far more reliably but gets there *later*. In a meta decided by turn 17,
+the tier-capped 30-card build is the better deck despite the worse headline number — which is
+also why `--max-tier 3` and 30 cards are the defaults.
 
 ## Asking Claude instead
 
